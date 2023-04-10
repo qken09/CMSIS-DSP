@@ -1,3 +1,49 @@
+#include "mbed.h"
+#include "dsp.h"
+
+Ticker ticker;
+AnalogIn fb(P0_11);
+PwmOut sw(P0_8);
+arm_pid_instance_f32 pid;
+float set_point = 0.19829462;
+
+void controlLoop(void)
+{
+    //Process the PID controller
+    float out = arm_pid_f32(&pid, set_point - fb.read());
+    
+    //Range limit the output
+    if (out < 0.0)
+        out = 0.0;
+    else if (out > 0.9)
+        out = 0.9;
+    
+    //Set the new output duty cycle
+    sw = out;
+}
+
+int main()
+{
+    //Set the switch period to 2µs (500kHz)
+    sw.period_us(2);
+
+    //Set the initial duty cycle to 0%
+    sw = 0.0;
+    
+    //Initialize the PID instance structure
+    pid.Kp = 1.0;
+    pid.Ki = 1.0;
+    pid.Kd = 0.0;
+    arm_pid_init_f32(&pid, 1);
+
+    //Run the PID control loop every 10ms
+    ticker.attach(&controlLoop, 0.01);
+
+    while(1) {
+        //Nothing to do here (except sleep maybe)
+    }
+}
+
 /**
  *	Keil project for DS18B20 & ARM PID example
  *
